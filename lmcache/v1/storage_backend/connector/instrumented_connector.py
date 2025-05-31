@@ -14,12 +14,13 @@
 
 # Standard
 from typing import List, Optional
+import logging
 import time
 
 # First Party
 from lmcache.logging import init_logger
 from lmcache.observability import LMCStatsMonitor
-from lmcache.utils import CacheEngineKey
+from lmcache.utils import CacheEngineKey, fmt_data_rate
 from lmcache.v1.memory_management import MemoryObj
 from lmcache.v1.storage_backend.connector.base_connector import RemoteConnector
 
@@ -48,10 +49,8 @@ class InstrumentedRemoteConnector(RemoteConnector):
         end = time.perf_counter()
         self._stats_monitor.update_interval_remote_time_to_put((end - begin) * 1000)
         self._stats_monitor.update_interval_remote_write_metrics(obj_size)
-        logger.debug(
-            f"Bytes offloaded: {obj_size / 1e6:.3f} MBytes "
-            f"in {(end - begin) * 1000:.3f}ms"
-        )
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Bytes offloaded: {fmt_data_rate(obj_size, end - begin)}")
 
     async def get(self, key: CacheEngineKey) -> Optional[MemoryObj]:
         begin = time.perf_counter()
@@ -61,10 +60,8 @@ class InstrumentedRemoteConnector(RemoteConnector):
         if memory_obj is not None:
             obj_size = memory_obj.get_size()
             self._stats_monitor.update_interval_remote_read_metrics(obj_size)
-            logger.debug(
-                f"Bytes loaded: {obj_size / 1e6:.3f} MBytes "
-                f"in {(end - begin) * 1000:.3f}ms"
-            )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Bytes loaded: {fmt_data_rate(obj_size, end - begin)}")
         return memory_obj
 
     # Delegate all other methods to the underlying connector

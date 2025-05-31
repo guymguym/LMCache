@@ -240,3 +240,51 @@ def thread_safe(func):
         return result
 
     return wrapper
+
+
+##### Formatting utilities #####
+
+
+def fmt_latency(seconds, precision=6):
+    """
+    Format the time as milliseconds for printing latency.
+    E.g., fmt_latency(0.123456789) == "123.457ms"
+    """
+    return f"{seconds * 1000:.{precision}f}ms"
+
+
+def fmt_data_size(
+    num,
+    precision=1,
+    radix=1024.0,
+    units=("", "K", "M", "G", "T", "P", "E", "Z", "Y"),
+    prefix="",
+    infix="i",
+    suffix="B",
+):
+    """
+    Format a number into a human-readable data size string.
+    By default uses binary units (KiB, MiB, GiB, etc.),
+    The result is rounded to the specified decimal precision.
+    E.g., fmt_data_size(1234567890) == "1.1GiB"
+    E.g., fmt_data_size(12345, prefix=" ", infix="", suffix="Bytes") == "12.1 KBytes"
+    """
+    unit = 0
+    while abs(num) >= radix and unit < len(units) - 1:
+        num /= radix
+        unit += 1
+    return (
+        f"{num:.{precision}f}{prefix}{units[unit]}{infix if unit > 0 else ''}{suffix}"
+    )
+
+
+def fmt_data_rate(bytes, seconds, short=False):
+    """
+    Format the data rate as XiB/sec for printing.
+    By default also includes the total data size and latency.
+    """
+    rate = f"{fmt_data_size(bytes / seconds)}/sec"
+    if short:
+        return rate
+    else:
+        return f"{fmt_data_size(bytes)} in {fmt_latency(seconds)} at {rate}"

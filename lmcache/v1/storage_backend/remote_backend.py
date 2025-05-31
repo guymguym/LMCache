@@ -17,6 +17,7 @@ from concurrent.futures import Future
 from functools import wraps
 from typing import List, Optional
 import asyncio
+import logging
 import threading
 import time
 
@@ -24,7 +25,11 @@ import time
 from lmcache.config import LMCacheEngineMetadata
 from lmcache.logging import init_logger
 from lmcache.observability import LMCStatsMonitor
-from lmcache.utils import CacheEngineKey, _lmcache_nvtx_annotate
+from lmcache.utils import (
+    CacheEngineKey,
+    _lmcache_nvtx_annotate,
+    fmt_data_rate,
+)
 from lmcache.v1.config import LMCacheEngineConfig
 from lmcache.v1.lookup_server import LookupServerInterface
 from lmcache.v1.memory_management import MemoryObj
@@ -216,10 +221,12 @@ class RemoteBackend(StorageBackendInterface):
             return None
         decompressed_memory_obj = self.deserializer.deserialize(memory_obj)
         t3 = time.perf_counter()
-        logger.debug(
-            f"Get takes {(t2 - t1) * 1000:.6f} msec, "
-            f"deserialization takes {(t3 - t2) * 1000:.6f} msec"
-        )
+        if logger.isEnabledFor(logging.DEBUG):
+            obj_size = memory_obj.get_size()
+            logger.debug(
+                f"Get takes {fmt_data_rate(obj_size, t2 - t1)}, "
+                f"deserialization takes {fmt_data_rate(obj_size, t3 - t2)}"
+            )
         return decompressed_memory_obj
 
     def get_non_blocking(

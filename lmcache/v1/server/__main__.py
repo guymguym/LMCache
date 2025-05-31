@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # Standard
+import logging
 import socket
 import threading
 import time
@@ -22,6 +23,7 @@ import torch
 
 # First Party
 from lmcache.logging import init_logger
+from lmcache.utils import fmt_latency
 from lmcache.v1.memory_management import MemoryFormat
 from lmcache.v1.protocol import ClientMetaMessage, Constants, ServerMetaMessage
 from lmcache.v1.server.storage_backend import CreateStorageBackend
@@ -64,10 +66,11 @@ class LMCacheServer:
                         t1 = time.perf_counter()
                         self.data_store.put(meta, s)
                         t2 = time.perf_counter()
-                        logger.debug(
-                            f"Time to receive data: {t1 - t0}, time to store "
-                            f"data: {t2 - t1}"
-                        )
+                        if logger.isEnabledFor(logging.DEBUG):
+                            logger.debug(
+                                f"Time to receive data: {fmt_latency(t1 - t0)}, "
+                                f"time to store data: {fmt_latency(t2 - t1)}"
+                            )
 
                     case Constants.CLIENT_GET:
                         t0 = time.perf_counter()
@@ -86,10 +89,12 @@ class LMCacheServer:
                             t2 = time.perf_counter()
                             client_socket.sendall(lms_memory_obj.data)
                             t3 = time.perf_counter()
-                            logger.debug(
-                                f"Time to get data: {t1 - t0}, time to send "
-                                f"meta: {t2 - t1}, time to send data: {t3 - t2}"
-                            )
+                            if logger.isEnabledFor(logging.DEBUG):
+                                logger.debug(
+                                    f"Time to get data: {fmt_latency(t1 - t0)}, "
+                                    f"time to send meta: {fmt_latency(t2 - t1)}, "
+                                    f"time to send data: {fmt_latency(t3 - t2)}"
+                                )
                         else:
                             client_socket.sendall(
                                 ServerMetaMessage(
